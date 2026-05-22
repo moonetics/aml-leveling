@@ -259,12 +259,27 @@ sqlite3 prisma/dev.db ".backup backups/aml-leveling.db"
 
 ## Production
 
-Build dan validasi:
+Buat `.env` production di VPS:
+
+```env
+DISCORD_TOKEN=
+DISCORD_CLIENT_ID=
+DISCORD_GUILD_ID=
+DATABASE_URL="file:../data/production.db"
+NODE_ENV=production
+LOG_LEVEL=info
+DEFAULT_TIMEZONE=Asia/Jakarta
+LEADERBOARD_UPDATE_INTERVAL_SECONDS=60
+```
+
+Setup awal di VPS:
 
 ```bash
 npm ci
+mkdir -p data
+npm run db:generate
+npm run db:deploy
 npm run build
-npm run db:migrate
 npm run health
 npm run commands:register
 ```
@@ -277,17 +292,30 @@ pm2 start ecosystem.config.cjs
 pm2 save
 ```
 
+Deploy update berikutnya:
+
+```bash
+git pull
+npm ci
+npm run db:generate
+npm run db:deploy
+npm run build
+pm2 restart aml-leveling
+```
+
 Monitoring:
 
 ```bash
 pm2 logs aml-leveling
+pm2 status
 npm run health
 ```
 
 Production notes:
 
-- Gunakan `DATABASE_URL` yang menunjuk ke path SQLite persisten.
-- Jalankan satu process bot saja untuk server AML.
+- Gunakan `DATABASE_URL` yang menunjuk ke path SQLite persisten, misalnya `file:../data/production.db`.
+- Jalankan satu process bot saja untuk server AML. `ecosystem.config.cjs` sudah diset `instances: 1`.
+- Gunakan `npm run db:deploy` untuk production, bukan `npm run db:migrate`.
 - Pastikan `.env` dan file `.db` tidak pernah dipush.
 - Backup SQLite secara rutin.
 - Pastikan permission Discord dan hierarchy role bot sudah benar.
