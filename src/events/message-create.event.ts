@@ -65,7 +65,9 @@ export async function handleMessageCreate(message: Message): Promise<void> {
     }
 
     if (!validation.isValid) {
-      await expService.recordInvalidMessage(message.guildId, message.author.id, now);
+      if (validation.reasonCode !== 'COOLDOWN_ACTIVE') {
+        await expService.recordInvalidMessage(message.guildId, message.author.id, now);
+      }
       logger.debug(
         {
           guildId: message.guildId,

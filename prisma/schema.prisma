@@ -34,8 +34,24 @@ model GuildSetting {
   expEvents            ExpEvent[]
   invalidMessageEvents InvalidMessageEvent[]
   auditLogs            AuditLog[]
+  commandUsageEvents   CommandUsageEvent[]
 
   @@map("guild_settings")
+}
+
+model CommandUsageEvent {
+  id            String   @id @default(uuid())
+  guildId       String   @map("guild_id")
+  userId        String   @map("user_id")
+  commandName   String   @map("command_name")
+  targetUserId  String?  @map("target_user_id")
+  createdAt     DateTime @default(now()) @map("created_at")
+
+  guild GuildSetting @relation(fields: [guildId], references: [guildId], onDelete: Cascade)
+
+  @@index([guildId, commandName, createdAt(sort: Desc)])
+  @@index([guildId, userId, createdAt(sort: Desc)])
+  @@map("command_usage_events")
 }
 
 model GuildExpChannel {

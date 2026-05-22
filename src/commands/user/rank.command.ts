@@ -1,9 +1,13 @@
-import { EmbedBuilder, SlashCommandBuilder, type ChatInputCommandInteraction, type User } from 'discord.js';
+import { EmbedBuilder, MessageFlags, SlashCommandBuilder, type ChatInputCommandInteraction, type User } from 'discord.js';
 
 import { ensureTargetGuild } from '../guards.js';
 import type { SlashCommand } from '../types.js';
+import { commandUsageService, type ProfileCheckCommandName } from '../../modules/commands/command-usage.service.js';
 import { rankService, type UserLevelProfile } from '../../modules/leveling/rank.service.js';
 import { buildProgressBar, formatExp, getProgressPercent } from '../../utils/format.js';
+
+const LEVEL_COMMAND_COOLDOWN_MS = 90 * 1000;
+const levelCommandCooldowns = new Map<string, number>();
 
 function buildRankEmbed(targetUser: User, profile: UserLevelProfile, titlePrefix = 'AML Leveling Profile') {
   const progressBar = buildProgressBar(profile.currentLevelExp, profile.requiredExpToNextLevel, 20);
@@ -27,9 +31,33 @@ function buildRankEmbed(targetUser: User, profile: UserLevelProfile, titlePrefix
     );
 }
 
+function getCooldownKey(interaction: ChatInputCommandInteraction): string {
+  return `${interaction.guildId ?? 'dm'}:${interaction.user.id}`;
+}
+
+async function enforceLevelCommandCooldown(interaction: ChatInputCommandInteraction): Promise<boolean> {
+  const now = Date.now();
+  const key = getCooldownKey(interaction);
+  const expiresAt = levelCommandCooldowns.get(key);
+
+  if (expiresAt && expiresAt > now) {
+    const remainingSeconds = Math.ceil((expiresAt - now) / 1000);
+
+    await interaction.reply({
+      content: `Tunggu ${remainingSeconds} detik lagi sebelum pakai /level lagi.`,
+      flags: MessageFlags.Ephemeral
+    });
+    return false;
+  }
+
+  levelCommandCooldowns.set(key, now + LEVEL_COMMAND_COOLDOWN_MS);
+  return true;
+}
+
 async function executeRankLike(
   interaction: ChatInputCommandInteraction,
-  titlePrefix = 'AML Leveling Profile'
+  titlePrefix = 'AML Leveling Profile',
+  commandName: ProfileCheckCommandName
 ): Promise<void> {
   if (!(await ensureTargetGuild(interaction)) || !interaction.guildId) {
     return;
@@ -37,6 +65,12 @@ async function executeRankLike(
 
   const targetUser = interaction.options.getUser('user') ?? interaction.user;
   const profile = await rankService.getUserProfile(interaction.guildId, targetUser.id);
+  await commandUsageService.recordProfileCheck({
+    guildId: interaction.guildId,
+    userId: interaction.user.id,
+    commandName,
+    targetUserId: targetUser.id
+  });
 
   await interaction.reply({
     embeds: [buildRankEmbed(targetUser, profile, titlePrefix)]
@@ -51,7 +85,7 @@ export const rankCommand: SlashCommand = {
       option.setName('user').setDescription('User yang ingin dilihat rank-nya.').setRequired(false)
     ),
   execute(interaction) {
-    return executeRankLike(interaction);
+    return executeRankLike(interaction, 'AML Leveling Profile', 'rank');
   }
 };
 
@@ -62,8 +96,12 @@ export const levelCommand: SlashCommand = {
     .addUserOption((option) =>
       option.setName('user').setDescription('User yang ingin dilihat level-nya.').setRequired(false)
     ),
-  execute(interaction) {
-    return executeRankLike(interaction);
+  async execute(interaction) {
+    if (!(await enforceLevelCommandCooldown(interaction))) {
+      return;
+    }
+
+    return executeRankLike(interaction, 'AML Leveling Profile', 'level');
   }
 };
 
@@ -75,6 +113,6 @@ export const profileCommand: SlashCommand = {
       option.setName('user').setDescription('User yang ingin dilihat profile-nya.').setRequired(false)
     ),
   execute(interaction) {
-    return executeRankLike(interaction, 'AML Leveling Detail');
+    return executeRankLike(interaction, 'AML Leveling Detail', 'profile');
   }
 };

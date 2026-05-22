@@ -14,6 +14,7 @@ import {
   RESET_ALL_CONFIRM_TEXT,
   type AdminLogEntry
 } from '../../modules/admin/admin-operations.service.js';
+import { commandUsageService } from '../../modules/commands/command-usage.service.js';
 import { guildSettingsService } from '../../modules/guild-settings/guild-settings.service.js';
 import { leaderboardService } from '../../modules/leveling/leaderboard.service.js';
 import { roleRewardService } from '../../modules/leveling/role-reward.service.js';
@@ -335,6 +336,38 @@ async function handleLogs(interaction: ChatInputCommandInteraction): Promise<voi
   });
 }
 
+async function handleStats(interaction: ChatInputCommandInteraction, subcommand: string): Promise<void> {
+  if (subcommand !== 'profile-checks') {
+    return;
+  }
+
+  const guildId = getGuildId(interaction);
+  const limit = interaction.options.getInteger('limit') ?? 10;
+  const rows = await commandUsageService.getProfileCheckStats(guildId, limit);
+  const description =
+    rows.length === 0
+      ? 'Belum ada data penggunaan /level, /rank, atau /profile.'
+      : rows
+          .map(
+            (row, index) =>
+              `${index + 1}. <@${row.userId}> — total ${row.totalCount} | /level ${row.levelCount} | /rank ${
+                row.rankCount
+              } | /profile ${row.profileCount} | terakhir ${formatDiscordTimestamp(row.lastUsedAt)}`
+          )
+          .join('\n');
+
+  await interaction.reply({
+    flags: MessageFlags.Ephemeral,
+    embeds: [
+      new EmbedBuilder()
+        .setTitle('Profile Check Statistics')
+        .setDescription(description)
+        .setColor(0x7755d4)
+        .setFooter({ text: 'Tracking dimulai sejak fitur statistik ini aktif.' })
+    ]
+  });
+}
+
 export const levelingCommand: SlashCommand = {
   data: new SlashCommandBuilder()
     .setName('leveling')
@@ -538,6 +571,19 @@ export const levelingCommand: SlashCommand = {
             .addStringOption((option) => option.setName('reason').setDescription('Alasan reset.'))
         )
     )
+    .addSubcommandGroup((group) =>
+      group
+        .setName('stats')
+        .setDescription('Lihat statistik penggunaan command leveling.')
+        .addSubcommand((subcommand) =>
+          subcommand
+            .setName('profile-checks')
+            .setDescription('Lihat siapa yang sering memakai /level, /rank, dan /profile.')
+            .addIntegerOption((option) =>
+              option.setName('limit').setDescription('Jumlah user yang ditampilkan.').setMinValue(1).setMaxValue(25)
+            )
+        )
+    )
     .addSubcommand((subcommand) =>
       subcommand
         .setName('logs')
@@ -596,6 +642,11 @@ export const levelingCommand: SlashCommand = {
 
     if (group === 'reset') {
       await handleReset(interaction, subcommand);
+      return;
+    }
+
+    if (group === 'stats') {
+      await handleStats(interaction, subcommand);
       return;
     }
 

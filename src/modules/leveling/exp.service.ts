@@ -1,6 +1,7 @@
 import type { GuildSetting, PrismaClient, UserLevelStat } from '@prisma/client';
 
 import { prisma, type TransactionClient } from '../../database/prisma.js';
+import { expTransactionQueue, type TransactionQueue } from '../../database/transaction-queue.js';
 import { dateKeyToUtcDate, getDateKeyInTimezone, isSameDateInTimezone } from '../../utils/time.js';
 import { buildDefaultGuildSettingsCreateInput } from '../guild-settings/default-settings.js';
 import { levelFormulaService, type LevelFormulaService } from './level-formula.js';
@@ -23,13 +24,14 @@ export class ExpService {
   constructor(
     private readonly database: ExpDatabase = prisma,
     private readonly formula: LevelFormulaService = levelFormulaService,
-    private readonly randomInt: RandomInt = defaultRandomInt
+    private readonly randomInt: RandomInt = defaultRandomInt,
+    private readonly transactionQueue: TransactionQueue = expTransactionQueue
   ) {}
 
   async grantChatExp(input: GrantChatExpInput): Promise<GrantExpResult> {
     const now = input.now ?? DEFAULT_NOW();
 
-    return this.database.$transaction(async (tx) => {
+    return this.runQueuedTransaction(async (tx) => {
       const settings = await this.ensureGuildSettings(tx, input.guildId);
       const stat = await this.getOrCreateUserStat(tx, input.guildId, input.userId, now);
       const dailyState = this.getDailyState(stat, settings, now);
@@ -124,7 +126,7 @@ export class ExpService {
   }
 
   async recordInvalidMessage(guildId: string, userId: string, now = DEFAULT_NOW()): Promise<void> {
-    await this.database.$transaction(async (tx) => {
+    await this.runQueuedTransaction(async (tx) => {
       await this.ensureGuildSettings(tx, guildId);
       await this.getOrCreateUserStat(tx, guildId, userId, now);
       await tx.userLevelStat.update({
@@ -140,7 +142,7 @@ export class ExpService {
   private async applyManualExp(input: ManualExpInput | SetExpInput, operation: 'add' | 'remove' | 'set') {
     const now = input.now ?? DEFAULT_NOW();
 
-    return this.database.$transaction(async (tx) => {
+    return this.runQueuedTransaction(async (tx) => {
       await this.ensureGuildSettings(tx, input.guildId);
       const stat = await this.getOrCreateUserStat(tx, input.guildId, input.userId, now);
       const oldTotalExp = stat.totalExp;
@@ -204,6 +206,15 @@ export class ExpService {
       update: {},
       create: buildDefaultGuildSettingsCreateInput(guildId)
     });
+  }
+
+  private runQueuedTransaction<T>(callback: (tx: TransactionClient) => Promise<T>): Promise<T> {
+    return this.transactionQueue.run(() =>
+      this.database.$transaction(callback, {
+        maxWait: 20_000,
+        timeout: 20_000
+      })
+    );
   }
 
   private async getOrCreateUserStat(
