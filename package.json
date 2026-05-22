@@ -1,0 +1,44 @@
+{
+  "name": "aml-leveling",
+  "version": "0.1.0",
+  "description": "AML Leveling Discord bot foundation.",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "dev": "tsx watch src/index.ts",
+    "build": "tsc -p tsconfig.json",
+    "start": "node dist/index.js",
+    "lint": "eslint .",
+    "test": "vitest run",
+    "db:migrate": "prisma migrate dev",
+    "db:generate": "prisma generate",
+    "commands:register": "tsx scripts/register-commands.ts",
+    "roles:create": "tsx scripts/create-level-roles.ts",
+    "roles:delete": "tsx scripts/delete-level-roles.ts",
+    "roles:list": "tsx scripts/list-guild-roles.ts",
+    "health": "tsx scripts/health-check.ts"
+  },
+  "engines": {
+    "node": ">=22.0.0"
+  },
+  "dependencies": {
+    "@prisma/client": "^6.19.0",
+    "discord.js": "^14.24.2",
+    "dotenv": "^17.2.3",
+    "pino": "^10.1.0",
+    "zod": "^4.1.12"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.39.1",
+    "@types/node": "^24.10.1",
+    "eslint": "^9.39.1",
+    "globals": "^16.5.0",
+    "pino-pretty": "^13.1.2",
+    "prettier": "^3.6.2",
+    "prisma": "^6.19.0",
+    "tsx": "^4.20.6",
+    "typescript": "^5.9.3",
+    "typescript-eslint": "^8.46.4",
+    "vitest": "^4.0.6"
+  }
+}
