@@ -197,7 +197,7 @@ describe('ExpService', () => {
       reason: 'manual set'
     });
 
-    expect(addResult.newLevel).toBe(4);
+    expect(addResult.newLevel).toBe(7);
     expect(removeResult.newTotalExp).toBe(50n);
     expect(removeResult.newLevel).toBe(1);
     expect(setResult.newTotalExp).toBe(0n);

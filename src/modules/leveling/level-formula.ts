@@ -5,7 +5,7 @@ export class LevelFormulaService {
     const safeLevel = Math.max(1, Math.floor(level));
     const previousLevels = BigInt(safeLevel - 1);
 
-    return 100n + previousLevels * 75n + previousLevels * previousLevels * 20n;
+    return 100n + previousLevels * 15n;
   }
 
   calculateLevel(totalExp: bigint | number): LevelFormulaResult {
@@ -30,4 +30,3 @@ export class LevelFormulaService {
 }
 
 export const levelFormulaService = new LevelFormulaService();
-

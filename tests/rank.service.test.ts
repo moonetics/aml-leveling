@@ -118,6 +118,7 @@ describe('RankService', () => {
     const rewards = await service.getActiveRewards('guild-1');
 
     expect(rewards[0]).toMatchObject({ requiredLevel: 1, roleId: '1507285713882976317' });
-    expect(rewards.at(-1)).toMatchObject({ requiredLevel: 50, roleId: '1507285681074868264' });
+    expect(rewards).toHaveLength(20);
+    expect(rewards.at(-1)).toMatchObject({ requiredLevel: 91, roleId: '1507424064136937482' });
   });
 });

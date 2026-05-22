@@ -15,8 +15,10 @@
     "db:generate": "prisma generate",
     "commands:register": "tsx scripts/register-commands.ts",
     "roles:create": "tsx scripts/create-level-roles.ts",
+    "roles:apply": "tsx scripts/apply-level-roles.ts",
     "roles:delete": "tsx scripts/delete-level-roles.ts",
     "roles:list": "tsx scripts/list-guild-roles.ts",
+    "roles:sync-all": "tsx scripts/sync-level-roles.ts",
     "health": "tsx scripts/health-check.ts"
   },
   "engines": {

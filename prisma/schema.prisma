@@ -12,7 +12,7 @@ model GuildSetting {
   enabled                Boolean  @default(true)
   minExp                 Int      @default(5) @map("min_exp")
   maxExp                 Int      @default(10) @map("max_exp")
-  cooldownSeconds        Int      @default(30) @map("cooldown_seconds")
+  cooldownSeconds        Int      @default(20) @map("cooldown_seconds")
   dailyExpCap            Int      @default(500) @map("daily_exp_cap")
   timezone               String   @default("Asia/Jakarta")
   leaderboardEnabled     Boolean  @default(false) @map("leaderboard_enabled")

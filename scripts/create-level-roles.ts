@@ -1,35 +1,7 @@
-import { Client, GatewayIntentBits, PermissionFlagsBits } from 'discord.js';
+import { Client, GatewayIntentBits, PermissionFlagsBits, type ColorResolvable } from 'discord.js';
 
 import { getEnv } from '../src/config/env.js';
-
-type LevelRoleDefinition = {
-  requiredLevel: number;
-  name: string;
-  range: string;
-};
-
-const LEVEL_ROLES: readonly LevelRoleDefinition[] = [
-  { requiredLevel: 1, name: 'Level 1', range: 'Level 1' },
-  { requiredLevel: 2, name: 'Level 2-3', range: 'Level 2-3' },
-  { requiredLevel: 4, name: 'Level 4-5', range: 'Level 4-5' },
-  { requiredLevel: 6, name: 'Level 6-7', range: 'Level 6-7' },
-  { requiredLevel: 8, name: 'Level 8-10', range: 'Level 8-10' },
-  { requiredLevel: 11, name: 'Level 11-13', range: 'Level 11-13' },
-  { requiredLevel: 14, name: 'Level 14-16', range: 'Level 14-16' },
-  { requiredLevel: 17, name: 'Level 17-19', range: 'Level 17-19' },
-  { requiredLevel: 20, name: 'Level 20-22', range: 'Level 20-22' },
-  { requiredLevel: 23, name: 'Level 23-25', range: 'Level 23-25' },
-  { requiredLevel: 26, name: 'Level 26-28', range: 'Level 26-28' },
-  { requiredLevel: 29, name: 'Level 29-31', range: 'Level 29-31' },
-  { requiredLevel: 32, name: 'Level 32-34', range: 'Level 32-34' },
-  { requiredLevel: 35, name: 'Level 35-37', range: 'Level 35-37' },
-  { requiredLevel: 38, name: 'Level 38-40', range: 'Level 38-40' },
-  { requiredLevel: 41, name: 'Level 41-43', range: 'Level 41-43' },
-  { requiredLevel: 44, name: 'Level 44-46', range: 'Level 44-46' },
-  { requiredLevel: 47, name: 'Level 47-48', range: 'Level 47-48' },
-  { requiredLevel: 49, name: 'Level 49', range: 'Level 49' },
-  { requiredLevel: 50, name: 'Level 50', range: 'Level 50+' }
-];
+import { STATIC_LEVEL_ROLE_REWARDS } from '../src/modules/leveling/static-level-roles.js';
 
 async function main(): Promise<void> {
   const env = getEnv();
@@ -41,32 +13,55 @@ async function main(): Promise<void> {
     const me = await guild.members.fetchMe();
 
     if (!me.permissions.has(PermissionFlagsBits.ManageRoles)) {
-      throw new Error('Bot membutuhkan permission Manage Roles untuk membuat role leveling.');
+      throw new Error('Bot membutuhkan permission Manage Roles untuk membuat atau mengubah role leveling.');
     }
 
     const roles = await guild.roles.fetch();
-    const created: string[] = [];
-    const skipped: string[] = [];
+    const created: Array<{ requiredLevel: number; name: string; roleId: string }> = [];
+    const updated: Array<{ requiredLevel: number; name: string; roleId: string }> = [];
+    const mapping: Array<{ requiredLevel: number; name: string; roleId: string }> = [];
+    const levelRoles = [];
 
-    for (const roleDefinition of [...LEVEL_ROLES].reverse()) {
-      const existingRole = roles.find((role) => role.name === roleDefinition.name);
+    for (const reward of [...STATIC_LEVEL_ROLE_REWARDS].reverse()) {
+      const existingRole = roles.get(reward.roleId) ?? roles.find((role) => role.name === reward.name);
 
       if (existingRole) {
-        skipped.push(roleDefinition.name);
+        await existingRole.edit({
+          name: reward.name,
+          color: reward.color as ColorResolvable,
+          hoist: false,
+          mentionable: false,
+          reason: `AML Leveling role mapping for ${reward.range}`
+        });
+        updated.push({ requiredLevel: reward.requiredLevel, name: reward.name, roleId: existingRole.id });
+        mapping.push({ requiredLevel: reward.requiredLevel, name: reward.name, roleId: existingRole.id });
+        levelRoles.push({ role: existingRole, position: reward.requiredLevel });
         continue;
       }
 
       const role = await guild.roles.create({
-        name: roleDefinition.name,
+        name: reward.name,
+        color: reward.color as ColorResolvable,
         hoist: false,
         mentionable: false,
         permissions: [],
-        reason: `AML Leveling reward role for ${roleDefinition.range}`
+        reason: `AML Leveling reward role for ${reward.range}`
       });
 
       roles.set(role.id, role);
-      created.push(roleDefinition.name);
+      created.push({ requiredLevel: reward.requiredLevel, name: reward.name, roleId: role.id });
+      mapping.push({ requiredLevel: reward.requiredLevel, name: reward.name, roleId: role.id });
+      levelRoles.push({ role, position: reward.requiredLevel });
     }
+
+    await guild.roles.setPositions(
+      levelRoles
+        .sort((a, b) => a.position - b.position)
+        .map((entry, index) => ({
+          role: entry.role,
+          position: index + 1
+        }))
+    );
 
     console.log(
       JSON.stringify(
@@ -74,8 +69,9 @@ async function main(): Promise<void> {
           ok: true,
           guildId: guild.id,
           created,
-          skipped,
-          nextStep: 'Jalankan /leveling roles mode mode:highest_only lalu tambahkan reward role sesuai docs/role-level-mapping.md'
+          updated,
+          mapping: mapping.sort((a, b) => a.requiredLevel - b.requiredLevel),
+          nextStep: 'Update STATIC_LEVEL_ROLE_REWARDS with any newly created role IDs, then run npm run roles:apply.'
         },
         null,
         2

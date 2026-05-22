@@ -95,14 +95,17 @@ export async function handleMessageCreate(message: Message): Promise<void> {
       );
     }
 
-    if (result.levelChanged && message.guild) {
+    if (result.granted && message.guild) {
       try {
         const syncResult = await roleRewardService.syncUserRewards(message.guild, message.author.id);
-        await notificationService.sendLevelUpNotification(message, result, syncResult);
+
+        if (result.levelChanged) {
+          await notificationService.sendLevelUpNotification(message, result, syncResult);
+        }
       } catch (error) {
         logger.warn(
           { err: error, guildId: message.guildId, userId: message.author.id },
-          'Level-up side effects failed'
+          'Role reward sync failed after EXP grant'
         );
       }
     }

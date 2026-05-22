@@ -7,11 +7,11 @@ describe('LevelFormulaService', () => {
 
   it.each([
     [1, 100n],
-    [2, 195n],
-    [3, 330n],
-    [4, 505n],
-    [5, 720n],
-    [10, 2395n]
+    [2, 115n],
+    [3, 130n],
+    [4, 145n],
+    [5, 160n],
+    [10, 235n]
   ])('calculates required EXP for level %s', (level, expected) => {
     expect(service.getRequiredExpForNextLevel(level)).toBe(expected);
   });
@@ -28,15 +28,15 @@ describe('LevelFormulaService', () => {
     expect(service.calculateLevel(100)).toEqual({
       level: 2,
       currentLevelExp: 0n,
-      requiredExpToNextLevel: 195n
+      requiredExpToNextLevel: 115n
     });
   });
 
   it('handles multi-level totals', () => {
     expect(service.calculateLevel(1000)).toEqual({
-      level: 4,
-      currentLevelExp: 375n,
-      requiredExpToNextLevel: 505n
+      level: 7,
+      currentLevelExp: 175n,
+      requiredExpToNextLevel: 190n
     });
   });
 
@@ -48,4 +48,3 @@ describe('LevelFormulaService', () => {
     });
   });
 });
-

@@ -2,7 +2,7 @@ export const DEFAULT_GUILD_SETTINGS = {
   enabled: true,
   minExp: 5,
   maxExp: 10,
-  cooldownSeconds: 30,
+  cooldownSeconds: 20,
   dailyExpCap: 500,
   timezone: 'Asia/Jakarta',
   leaderboardEnabled: false,

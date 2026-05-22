@@ -11,18 +11,18 @@ import type { StaticLevelRoleReward } from '../src/modules/leveling/static-level
 const databaseUrl = 'file:./test-role-reward-service.db';
 const databasePath = join(process.cwd(), 'prisma', 'test-role-reward-service.db');
 const testRewards: readonly StaticLevelRoleReward[] = [
-  { requiredLevel: 1, roleId: 'role-1', name: 'Level 1', range: 'Level 1' },
-  { requiredLevel: 2, roleId: 'role-2-3', name: 'Level 2-3', range: 'Level 2-3' },
-  { requiredLevel: 8, roleId: 'role-8-10', name: 'Level 8-10', range: 'Level 8-10' },
-  { requiredLevel: 50, roleId: 'role-50', name: 'Level 50', range: 'Level 50+' }
+  { requiredLevel: 1, roleId: 'role-1-2', name: 'Level 1-2', range: 'Level 1-2', color: '#B8F3FF' },
+  { requiredLevel: 3, roleId: 'role-3-5', name: 'Level 3-5', range: 'Level 3-5', color: '#B8E8FF' },
+  { requiredLevel: 46, roleId: 'role-46-50', name: 'Level 46-50', range: 'Level 46-50', color: '#C9F3C7' },
+  { requiredLevel: 91, roleId: 'role-91-100', name: 'Level 91-100+', range: 'Level 91+', color: '#E9E1D8' }
 ];
 
 function createMockGuild(memberRoleIds: string[] = []) {
   const roleStore = new Map([
-    ['role-1', { id: 'role-1', position: 1 }],
-    ['role-2-3', { id: 'role-2-3', position: 2 }],
-    ['role-8-10', { id: 'role-8-10', position: 8 }],
-    ['role-50', { id: 'role-50', position: 20 }],
+    ['role-1-2', { id: 'role-1-2', position: 1 }],
+    ['role-3-5', { id: 'role-3-5', position: 2 }],
+    ['role-46-50', { id: 'role-46-50', position: 8 }],
+    ['role-91-100', { id: 'role-91-100', position: 20 }],
     ['bot-role', { id: 'bot-role', position: 50 }]
   ]);
   const memberRoles = new Map(
@@ -96,10 +96,10 @@ describe('RoleRewardService static role rewards', () => {
   });
 
   it.each([
-    [1, 'role-1'],
-    [3, 'role-2-3'],
-    [10, 'role-8-10'],
-    [55, 'role-50']
+    [1, 'role-1-2'],
+    [4, 'role-3-5'],
+    [50, 'role-46-50'],
+    [105, 'role-91-100']
   ])('syncs level %s to the highest eligible static role', async (currentLevel, expectedRoleId) => {
     const guild = createMockGuild();
     await prisma.userLevelStat.create({
@@ -113,15 +113,15 @@ describe('RoleRewardService static role rewards', () => {
   });
 
   it('removes older level roles and leaves only the highest eligible role', async () => {
-    const guild = createMockGuild(['role-1', 'role-2-3']);
+    const guild = createMockGuild(['role-1-2', 'role-3-5']);
     await prisma.userLevelStat.create({
-      data: { guildId: 'guild-1', userId: 'user-1', currentLevel: 10, totalExp: 1000n }
+      data: { guildId: 'guild-1', userId: 'user-1', currentLevel: 50, totalExp: 1000n }
     });
 
     const result = await service.syncUserRewards(guild as never, 'user-1');
 
-    expect(result.addedRoleIds).toEqual(['role-8-10']);
-    expect(result.removedRoleIds).toEqual(['role-1', 'role-2-3']);
+    expect(result.addedRoleIds).toEqual(['role-46-50']);
+    expect(result.removedRoleIds).toEqual(['role-1-2', 'role-3-5']);
   });
 
   it('skips users without stats', async () => {
