@@ -14,6 +14,20 @@ export type ProfileCheckStatsRow = {
   lastUsedAt: Date;
 };
 
+function normalizeRawDate(value: Date | string | number | bigint): Date {
+  if (value instanceof Date) {
+    return value;
+  }
+
+  const date = new Date(typeof value === 'bigint' ? Number(value) : value);
+
+  if (Number.isNaN(date.getTime())) {
+    throw new Error(`Invalid command usage timestamp: ${String(value)}`);
+  }
+
+  return date;
+}
+
 export class CommandUsageService {
   constructor(private readonly database: PrismaClient = prisma) {}
 
@@ -53,7 +67,7 @@ export class CommandUsageService {
         level_count: bigint;
         rank_count: bigint;
         profile_count: bigint;
-        last_used_at: Date;
+        last_used_at: Date | string | number | bigint;
       }>
     >`
       SELECT
@@ -77,7 +91,7 @@ export class CommandUsageService {
       levelCount: Number(row.level_count),
       rankCount: Number(row.rank_count),
       profileCount: Number(row.profile_count),
-      lastUsedAt: row.last_used_at
+      lastUsedAt: normalizeRawDate(row.last_used_at)
     }));
   }
 }

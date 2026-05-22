@@ -57,6 +57,7 @@ describe('CommandUsageService', () => {
       rankCount: 1,
       profileCount: 0
     });
+    expect(rows[0]?.lastUsedAt).toBeInstanceOf(Date);
     expect(rows[1]).toMatchObject({
       userId: 'user-b',
       totalCount: 1,

@@ -1,0 +1,173 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model GuildSetting {
+  guildId                String   @id @map("guild_id")
+  enabled                Boolean  @default(true)
+  minExp                 Int      @default(5) @map("min_exp")
+  maxExp                 Int      @default(10) @map("max_exp")
+  cooldownSeconds        Int      @default(20) @map("cooldown_seconds")
+  dailyExpCap            Int      @default(500) @map("daily_exp_cap")
+  timezone               String   @default("Asia/Jakarta")
+  leaderboardEnabled     Boolean  @default(false) @map("leaderboard_enabled")
+  leaderboardChannelId   String?  @map("leaderboard_channel_id")
+  leaderboardMessageId   String?  @map("leaderboard_message_id")
+  leaderboardTopLimit    Int      @default(10) @map("leaderboard_top_limit")
+  levelUpChannelId       String?  @map("level_up_channel_id")
+  levelUpTemplate        String?  @map("level_up_template")
+  roleRewardMode         String   @default("cumulative") @map("role_reward_mode")
+  allowLinkOnlyExp       Boolean  @default(false) @map("allow_link_only_exp")
+  allowEmojiOnlyExp      Boolean  @default(false) @map("allow_emoji_only_exp")
+  allowAttachmentOnlyExp Boolean  @default(false) @map("allow_attachment_only_exp")
+  createdAt              DateTime @default(now()) @map("created_at")
+  updatedAt              DateTime @updatedAt @map("updated_at")
+
+  expChannels          GuildExpChannel[]
+  userLevelStats       UserLevelStat[]
+  roleRewards          RoleReward[]
+  expEvents            ExpEvent[]
+  invalidMessageEvents InvalidMessageEvent[]
+  auditLogs            AuditLog[]
+  commandUsageEvents   CommandUsageEvent[]
+
+  @@map("guild_settings")
+}
+
+model CommandUsageEvent {
+  id           String   @id @default(uuid())
+  guildId      String   @map("guild_id")
+  userId       String   @map("user_id")
+  commandName  String   @map("command_name")
+  targetUserId String?  @map("target_user_id")
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  guild GuildSetting @relation(fields: [guildId], references: [guildId], onDelete: Cascade)
+
+  @@index([guildId, commandName, createdAt(sort: Desc)])
+  @@index([guildId, userId, createdAt(sort: Desc)])
+  @@map("command_usage_events")
+}
+
+model GuildExpChannel {
+  id        String   @id @default(uuid())
+  guildId   String   @map("guild_id")
+  channelId String   @map("channel_id")
+  mode      String
+  createdBy String?  @map("created_by")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  guild GuildSetting @relation(fields: [guildId], references: [guildId], onDelete: Cascade)
+
+  @@unique([guildId, channelId, mode])
+  @@index([guildId])
+  @@index([channelId])
+  @@map("guild_exp_channels")
+}
+
+model UserLevelStat {
+  guildId                String    @map("guild_id")
+  userId                 String    @map("user_id")
+  totalExp               BigInt    @default(0) @map("total_exp")
+  currentLevel           Int       @default(1) @map("current_level")
+  currentLevelExp        BigInt    @default(0) @map("current_level_exp")
+  requiredExpToNextLevel BigInt    @default(100) @map("required_exp_to_next_level")
+  validMessageCount      BigInt    @default(0) @map("valid_message_count")
+  invalidMessageCount    BigInt    @default(0) @map("invalid_message_count")
+  dailyExp               Int       @default(0) @map("daily_exp")
+  dailyExpDate           DateTime? @map("daily_exp_date")
+  lastExpGainAt          DateTime? @map("last_exp_gain_at")
+  lastMessageAt          DateTime? @map("last_message_at")
+  lastLevelUpAt          DateTime? @map("last_level_up_at")
+  createdAt              DateTime  @default(now()) @map("created_at")
+  updatedAt              DateTime  @updatedAt @map("updated_at")
+
+  guild GuildSetting @relation(fields: [guildId], references: [guildId], onDelete: Cascade)
+
+  @@id([guildId, userId])
+  @@index([guildId, currentLevel(sort: Desc), totalExp(sort: Desc)], name: "idx_user_level_stats_leaderboard")
+  @@index([guildId, userId], name: "idx_user_level_stats_user")
+  @@map("user_level_stats")
+}
+
+model RoleReward {
+  id            String   @id @default(uuid())
+  guildId       String   @map("guild_id")
+  requiredLevel Int      @map("required_level")
+  roleId        String   @map("role_id")
+  isActive      Boolean  @default(true) @map("is_active")
+  createdBy     String?  @map("created_by")
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+
+  guild GuildSetting @relation(fields: [guildId], references: [guildId], onDelete: Cascade)
+
+  @@unique([guildId, requiredLevel, roleId])
+  @@index([guildId])
+  @@map("role_rewards")
+}
+
+model ExpEvent {
+  id           String   @id @default(uuid())
+  guildId      String   @map("guild_id")
+  userId       String   @map("user_id")
+  source       String
+  amount       Int
+  oldTotalExp  BigInt   @map("old_total_exp")
+  newTotalExp  BigInt   @map("new_total_exp")
+  oldLevel     Int      @map("old_level")
+  newLevel     Int      @map("new_level")
+  reasonCode   String?  @map("reason_code")
+  messageId    String?  @map("message_id")
+  channelId    String?  @map("channel_id")
+  actorUserId  String?  @map("actor_user_id")
+  metadata     String?
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  guild GuildSetting @relation(fields: [guildId], references: [guildId], onDelete: Cascade)
+
+  @@index([guildId])
+  @@index([userId])
+  @@index([guildId, userId, createdAt(sort: Desc)], name: "idx_exp_events_guild_user_created")
+  @@map("exp_events")
+}
+
+model InvalidMessageEvent {
+  id         String   @id @default(uuid())
+  guildId    String   @map("guild_id")
+  userId     String   @map("user_id")
+  messageId  String   @map("message_id")
+  channelId  String   @map("channel_id")
+  reasonCode String   @map("reason_code")
+  metadata   String?
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  guild GuildSetting @relation(fields: [guildId], references: [guildId], onDelete: Cascade)
+
+  @@index([guildId])
+  @@index([guildId, userId, createdAt(sort: Desc)])
+  @@map("invalid_message_events")
+}
+
+model AuditLog {
+  id           String   @id @default(uuid())
+  guildId      String   @map("guild_id")
+  actorUserId  String   @map("actor_user_id")
+  action       String
+  targetUserId String?  @map("target_user_id")
+  before       String?
+  after        String?
+  reason       String?
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  guild GuildSetting @relation(fields: [guildId], references: [guildId], onDelete: Cascade)
+
+  @@index([guildId])
+  @@index([guildId, actorUserId, createdAt(sort: Desc)])
+  @@map("audit_logs")
+}
