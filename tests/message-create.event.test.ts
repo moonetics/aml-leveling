@@ -7,6 +7,7 @@ const mocks = vi.hoisted(() => ({
   findUserStat: vi.fn(),
   grantChatExp: vi.fn(),
   getEnv: vi.fn(),
+  safeEnsureDefaultRoleForUser: vi.fn(),
   loggerDebug: vi.fn(),
   loggerError: vi.fn(),
   loggerWarn: vi.fn(),
@@ -74,6 +75,12 @@ vi.mock('../src/modules/leveling/validation.service.js', () => ({
   }
 }));
 
+vi.mock('../src/modules/roles/default-member-role.service.js', () => ({
+  defaultMemberRoleService: {
+    safeEnsureDefaultRoleForUser: mocks.safeEnsureDefaultRoleForUser
+  }
+}));
+
 vi.mock('../src/utils/logger.js', () => ({
   logger: {
     debug: mocks.loggerDebug,
@@ -133,8 +140,10 @@ describe('handleMessageCreate role sync', () => {
   });
 
   it('syncs reward roles after valid EXP even when the user does not level up', async () => {
-    await handleMessageCreate(createMessage() as never);
+    const message = createMessage();
+    await handleMessageCreate(message as never);
 
+    expect(mocks.safeEnsureDefaultRoleForUser).toHaveBeenCalledWith(message.guild, 'user-1');
     expect(mocks.syncUserRewards).toHaveBeenCalledWith({ id: 'guild-1' }, 'user-1');
     expect(mocks.sendLevelUpNotification).not.toHaveBeenCalled();
   });

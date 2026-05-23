@@ -350,9 +350,9 @@ async function handleStats(interaction: ChatInputCommandInteraction, subcommand:
       : rows
           .map(
             (row, index) =>
-              `${index + 1}. <@${row.userId}> — total ${row.totalCount} | /level ${row.levelCount} | /rank ${
-                row.rankCount
-              } | /profile ${row.profileCount} | terakhir ${formatDiscordTimestamp(row.lastUsedAt)}`
+              `${index + 1}. <@${row.userId}> — total checks ${row.totalCount} | terakhir ${formatDiscordTimestamp(
+                row.lastUsedAt
+              )}`
           )
           .join('\n');
 

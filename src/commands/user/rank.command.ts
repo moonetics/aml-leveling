@@ -18,7 +18,7 @@ function buildRankEmbed(targetUser: User, profile: UserLevelProfile, titlePrefix
     .setColor(0x2f80ed)
     .setThumbnail(targetUser.displayAvatarURL())
     .addFields(
-      { name: 'Rank', value: profile.rank ? `#${profile.rank}` : 'Belum masuk leaderboard', inline: true },
+      { name: 'Rank', value: '#?', inline: true },
       { name: 'Level', value: String(profile.currentLevel), inline: true },
       { name: 'Total EXP', value: formatExp(profile.totalExp), inline: true },
       {

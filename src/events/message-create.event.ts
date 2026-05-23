@@ -8,6 +8,7 @@ import { expService } from '../modules/leveling/exp.service.js';
 import { notificationService } from '../modules/leveling/notification.service.js';
 import { roleRewardService } from '../modules/leveling/role-reward.service.js';
 import { messageValidationService } from '../modules/leveling/validation.service.js';
+import { defaultMemberRoleService } from '../modules/roles/default-member-role.service.js';
 import { logger } from '../utils/logger.js';
 
 export async function handleMessageCreate(message: Message): Promise<void> {
@@ -26,6 +27,10 @@ export async function handleMessageCreate(message: Message): Promise<void> {
         'Ignoring message from non-target guild'
       );
       return;
+    }
+
+    if (message.guild) {
+      void defaultMemberRoleService.safeEnsureDefaultRoleForUser(message.guild, message.author.id);
     }
 
     const settings = await guildSettingsService.ensureGuildSettings(message.guildId);

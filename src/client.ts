@@ -1,6 +1,7 @@
 import { Client, Events, GatewayIntentBits } from 'discord.js';
 
 import { handleInteractionCreate } from './events/interaction-create.event.js';
+import { handleGuildMemberAdd } from './events/guild-member-add.event.js';
 import { handleMessageCreate } from './events/message-create.event.js';
 import { handleReady } from './events/ready.event.js';
 import { logger } from './utils/logger.js';
@@ -21,6 +22,9 @@ export function createDiscordClient(): Client {
   });
   client.on(Events.MessageCreate, (message) => {
     void handleMessageCreate(message);
+  });
+  client.on(Events.GuildMemberAdd, (member) => {
+    void handleGuildMemberAdd(member);
   });
   client.on(Events.Error, (error) => {
     logger.error({ err: error }, 'Discord client error');
